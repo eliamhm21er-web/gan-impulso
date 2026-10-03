@@ -9,9 +9,10 @@ import {
   UserCheck,
   BadgeCheck,
   Users,
+  AlertCircle,
 } from 'lucide-react';
 import { AnimatedInput } from '@/components/AnimatedInput';
-import { validateAssociateId } from '@/services/registration';
+import { validateAssociateId, saveAssociate } from '@/services/registration';
 import type { AssociateInfo, SponsorAssignment, RegistrationStatus } from '@/types';
 
 interface GanamexStepProps {
@@ -34,6 +35,7 @@ export function GanamexStep({
   const [status, setStatus] = useState<RegistrationStatus>('pending');
   const [canActivate, setCanActivate] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [activateError, setActivateError] = useState('');
 
   const handleValidation = useCallback(async (id: string) => {
     if (id.trim().length < 3) {
@@ -65,7 +67,23 @@ export function GanamexStep({
   const handleActivate = async () => {
     if (!canActivate) return;
     setIsActivating(true);
-    await new Promise((r) => setTimeout(r, 900));
+    setActivateError('');
+
+    const result = await saveAssociate({
+      associateId,
+      associateName,
+      inviterInternalId: inviter.internalId,
+      sponsorInternalId: sponsor.sponsorInternalId,
+      nivel: sponsor.nivel,
+      posicion: sponsor.posicion,
+    });
+
+    if (!result.success) {
+      setActivateError(result.error || 'Error al guardar el registro');
+      setIsActivating(false);
+      return;
+    }
+
     setStatus('active');
     setIsActivating(false);
     setTimeout(() => onComplete(associateId.trim()), 800);
@@ -170,6 +188,14 @@ export function GanamexStep({
             )}
           </div>
         </div>
+
+        {/* Activation error */}
+        {activateError && (
+          <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 animate-fade-in">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+            <p className="text-xs text-red-600 font-body">{activateError}</p>
+          </div>
+        )}
 
         {/* Activate button */}
         <button
